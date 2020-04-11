@@ -18,16 +18,16 @@ class Key_CSVideoNet(BasicModule):
         self.numChannels = numChannels
 
         self.KeyCNN = KeyCNN(self.key_CR,self.Height,self.Widht,self.numChannels)
-        self.Measurements = Measurements(self.key_CR,self.key_CR,self.Height,self.Widht,2)
+        #self.Measurements = Measurements(self.key_CR,self.key_CR,self.Height,self.Widht,2)
     #@torchsnooper.snoop()
     def forward(self,input):
         #input type torch tensor
-        #input size [batch_size,1,height,width]
+        #input size [batch_size,height,width]
         #output type torch tensor
-        #output size [batch_size,1,height,width]
-        input_ = input.unsqueeze(1).repeat(1,2,1,1)
-        key_m,_ = self.Measurements(input_)
-        output = self.KeyCNN(key_m).view(input.size(0),self.Height,self.Widht)
+        #output size [batch_size,height,width]
+        #input_ = input.unsqueeze(1).repeat(1,2,1,1)
+        #key_m,_ = self.Measurements(input_)
+        output = self.KeyCNN(input).view(input.size(0),self.Height,self.Widht)
         return output
 
 

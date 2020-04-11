@@ -6,6 +6,7 @@ import os
 from operator import attrgetter
 import cv2
 from config import opt
+from PIL import Image
 
 class filename(object):
     def __init__(self,name,g,c,f,b):
@@ -43,6 +44,7 @@ class UCF101(data.Dataset):
         #use part data as train dataset and others as val dataset
         if self.train:
             train_dataset_ = train_file[0:int(0.7*imgs_num)]
+            #train_dataset_ = train_file
         else:
             train_dataset_ = train_file[int(0.7*imgs_num):]
         one_video_train_dataset = []
@@ -72,16 +74,14 @@ class UCF101(data.Dataset):
             f_b = item.b
 
         #do random transforms
-        '''
+        
         if transforms is None:
-            normalize = tf.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
+            normalize = tf.Normalize(mean=[0.485],std=[0.229])
             self.transforms = tf.Compose([
-                    tf.RandomReSizedCrop(224),
-                    tf.RandomHorizontalFlip(),
                     tf.ToTensor(),
                     normalize
                 ])
-        '''
+        
 
     def __getitem__(self,index):
         #output data type torch tensor
@@ -90,11 +90,10 @@ class UCF101(data.Dataset):
         img_path_object = self.train_dataset[index]
         for i in range(self.n):
             img_path = self.root+'/'+img_path_object[i].name + '_g'+ img_path_object[i].g+'_c'+img_path_object[i].c+'_'+ img_path_object[i].f + '_' + img_path_object[i].b + '.jpg'
-            data = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
+            data = Image.open(img_path)
+            data = self.transforms(data)
             output_.append(data)
-        output = np.array(output_)
-        output = t.from_numpy(output)
-        return output
+        return output_
     
     def __len__(self):
         return len(self.train_dataset)

@@ -7,13 +7,15 @@ from data.dataset_csvideonet import UCF101
 from torch.utils .data import DataLoader
 from torchnet import meter 
 from tqdm import tqdm 
+import math
 
 def train(**kwargs):
+    #os.environ['CUDA_VISIBLE_DEVICES'] = 
     opt._parse(kwargs)
 
     model = models.Key_CSVideoNet(opt.CR[0],opt.Height,opt.Width,1)
-    #if t.cuda.device_count() > 1:
-    #    model = t.nn.DataParallel(model,device_ids = [0,1,2])
+    if t.cuda.device_count() > 1:
+        model = t.nn.DataParallel(model,device_ids = [0,1,2,3])
     model.to(opt.device)
 
     train_data = UCF101(opt.train_data_root,train=True)
@@ -37,27 +39,24 @@ def train(**kwargs):
         loss_meter.reset()
 
         for ii,data in tqdm(enumerate(train_dataloader)):
-            for seq_num in range(opt.seqLength):
-                model.Measurements.binarization()
+            input = data[0].float().to(opt.device).squeeze(1)
+            target = input
+            input_ = input.view(input.size(0),input.size(1)*input.size(2),1)
+            weight = key_bernoulli_weights.repeat(input.size(0),1,1).to(opt.device)
+            data_i = t.bmm(weight,input_).view(input.size(0),1024)
 
-                input = data[:,seq_num,:,:].float().to(opt.device)
-                target = input
+            optimizer.zero_grad()
+            score = model(data_i)
 
-                optimizer.zero_grad()
-                score = model(input)
+            loss = criterion(score,target)
+            loss.backward()
+            optimizer.step()
 
-                loss = criterion(score,target)
-                loss.backward()
-                optimizer.step()
-
-                model.Measurements.restore()
-
-                loss_meter.add(loss.item())
-
-        model.save()
-
-        val_psnr_ave = val(model,val_dataloader)
-        print("result on validation dataset is:",val_psnr_ave)
+            loss_meter.add(loss.item())
+        if(epoch%10==0):
+            print("loss value is:",loss_meter.value()[0])
+            val_psnr_ave = val(model,val_dataloader)
+            print("result on validation dataset is:",val_psnr_ave)
 
         if loss_meter.value()[0] > previous_loss:          
             lr = lr * opt.lr_decay
@@ -65,6 +64,8 @@ def train(**kwargs):
                 param_group['lr'] = lr
     
         previous_loss = loss_meter.value()[0]
+
+    model.save()
         
 
 @t.no_grad()
@@ -72,15 +73,27 @@ def val(model,dataloader):
     model.eval()
     utils_eval = utils.Evaluation()
     for ii, data in tqdm(enumerate(dataloader)):
-        for seq_num in range(opt.seqLength):
-            val_input = data[:,seq_num,:,:].float().to(opt.device)
-            score = model(val_input).unsqueeze(1)
-            utils_eval.add(score,val_input.unsqueeze(1).float())
+        val_input = data[0].float().to(opt.device).squeeze(1)
+        val_input_ = val_input.view(val_input.size(0),val_input.size(1)*val_input.size(2),1)
+        weight = key_bernoulli_weights.repeat(val_input.size(0),1,1).to(opt.device)
+        data_i = t.bmm(weight,val_input_).view(val_input.size(0),1024)
+        score = model(data_i).unsqueeze(1)
+        utils_eval.add(score,val_input.unsqueeze(1).float())
     model.train()
     psnr_ave = utils_eval.psnr_value()
     return psnr_ave
 
 if __name__=='__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '2,3,4,5'
     import fire
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2,3,4,5'
+    key_bernoulli_weights = t.FloatTensor(1024,1024).bernoulli_(50/100)
+    n = 10
+    stdv = 1./math.sqrt(n)
+    weights_zero = key_bernoulli_weights[key_bernoulli_weights==0].uniform_(-stdv,0)
+    weights_one = key_bernoulli_weights[key_bernoulli_weights==1].uniform_(0,stdv)
+    key_bernoulli_weights[key_bernoulli_weights==0]=weights_zero
+    key_bernoulli_weights[key_bernoulli_weights==1]=weights_one
+    key_bernoulli_weights.clamp(-1.0,1.0)
+    key_bernoulli_weights = 0.5*(key_bernoulli_weights.sign()+1)
+    key_bernoulli_weights[key_bernoulli_weights==0.5]==1
     fire.Fire()

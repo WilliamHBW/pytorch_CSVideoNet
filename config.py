@@ -30,17 +30,17 @@ class DefaultConfig(object):
     load_model_path = None
     save_test_root = './result'
 
-    batch_size = 20  # batch size
+    batch_size = 200  # batch size
     use_gpu = False  # user GPU or not
     num_workers = 4  # how many workers for loading data
     print_freq = 20  # print info every N batch
 
-    max_epoch = 10
+    max_epoch = 10000
     lr = 1e-4 # initial learning rate
     momentum = 0.9
     lr_decay = 0.5  # when val_loss increase, lr = lr*lr_decay
     lr_decay_ever = 3
-    weight_decay = 0  # 损失函数
+    weight_decay = 5e-4  # 损失函数
 
     #model related parameters
     CR = [1,0.5]
@@ -51,6 +51,7 @@ class DefaultConfig(object):
 
     gradient_clipping = 10 #梯度剪枝
     device='cuda'
+    gpu_aval = '5,6,7'
 
     def _parse(self, kwargs):
         """

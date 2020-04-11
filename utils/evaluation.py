@@ -18,7 +18,7 @@ class Evaluation(object):
         target_ = target.cpu()
         ref_data = ref_.numpy()
         target_data = target_.numpy()
-        diff = ref_data - target_data
+        diff = (ref_data - target_data)/255.0
         diff_ = diff.flatten('C')
         rmse = math.sqrt( np.mean(diff_ ** 2.) )
         return 20*math.log10(1.0/rmse)
