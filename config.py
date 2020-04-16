@@ -43,7 +43,7 @@ class DefaultConfig(object):
     weight_decay = 5e-4  # 损失函数
 
     #model related parameters
-    CR = [1,0.5]
+    CR = [0.25,0.015625]
     seqLength = 10
     Height = 32
     Width = 32
@@ -51,7 +51,6 @@ class DefaultConfig(object):
 
     gradient_clipping = 10 #梯度剪枝
     device='cuda'
-    gpu_aval = '5,6,7'
 
     def _parse(self, kwargs):
         """

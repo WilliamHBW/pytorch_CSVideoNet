@@ -1,7 +1,8 @@
 import numpy as np 
 import math
 import torch as t
-
+import cv2
+import torchsnooper
 
 class Evaluation(object):
     def __init__(self):
@@ -18,11 +19,12 @@ class Evaluation(object):
         target_ = target.cpu()
         ref_data = ref_.numpy()
         target_data = target_.numpy()
-        diff = (ref_data - target_data)/255.0
+        diff = (ref_data - target_data)
         diff_ = diff.flatten('C')
-        rmse = math.sqrt( np.mean(diff_ ** 2.) )
-        return 20*math.log10(1.0/rmse)
-    
+        #rmse = math.sqrt( np.mean(diff_ ** 2.) )
+        rmse = np.mean(diff_**2.)
+        return 10*math.log10(1.0/rmse)
+    #@torchsnooper.snoop()
     def add(self,target,ref):
         #input type torch tensor
         #input size [batch_size,seqLength,height,width]
@@ -31,6 +33,15 @@ class Evaluation(object):
         for i in range(target.shape[0]):
             for j in range(target.shape[1]):
                 psnr_ = psnr_ + self.psnr_cal(target[i][j],ref[i][j])
+                '''
+                if(self.psnr_cal(target[i][j],ref[i][j]) < 5):
+                    #print(self.psnr_cal(target[i][j],ref[i][j]))
+                    target_addr = "./psnr/target"+str(i)+str(j)+".jpg"
+                    ref_addr = "./psnr/ref"+str(i)+str(j)+".jpg"
+                    print(target[i][j].size(),ref[i][j].size())
+                    cv2.imwrite(target_addr,target[i][j].unsqueeze_(2).numpy())
+                    cv2.imwrite(ref_addr,ref[i][j].unsqueeze_(2).numpy())
+                '''
         psnr_ = psnr_ / (target.size(0)*target.size(1))
         self.psnr_acc = self.psnr_acc + psnr_
         self.input_num = self.input_num + 1

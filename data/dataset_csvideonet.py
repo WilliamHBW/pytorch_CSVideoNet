@@ -7,6 +7,7 @@ from operator import attrgetter
 import cv2
 from config import opt
 from PIL import Image
+from config import opt
 
 class filename(object):
     def __init__(self,name,g,c,f,b):
@@ -24,7 +25,7 @@ class UCF101(data.Dataset):
     def __init__(self,root,transforms=None,train=True):
         imgs = [os.path.join(root,img) for img in os.listdir(root)]
         imgs_num = len(imgs)
-        self.n = 10
+        self.n = opt.seqLength
         self.root = root
         self.train = train
 
@@ -60,7 +61,7 @@ class UCF101(data.Dataset):
                 one_video_train_dataset.sort(key=lambda x:int(x.f))
                 tmp_num = len(one_video_train_dataset)
                 for item_1 in [one_video_train_dataset[i:i+self.n] for i in range(0,tmp_num,self.n)]:
-                    if(len(item_1)==10):
+                    if(len(item_1)==self.n):
                         self.train_dataset.append(item_1)
                     else:
                         break
@@ -78,8 +79,8 @@ class UCF101(data.Dataset):
         if transforms is None:
             normalize = tf.Normalize(mean=[0.485],std=[0.229])
             self.transforms = tf.Compose([
-                    tf.ToTensor(),
-                    normalize
+                    tf.ToTensor()
+                    #normalize
                 ])
         
 
@@ -93,13 +94,14 @@ class UCF101(data.Dataset):
             data = Image.open(img_path)
             data = self.transforms(data)
             output_.append(data)
+        #print(len(output_))
         return output_
     
     def __len__(self):
         return len(self.train_dataset)
 
 '''
-saveroot = "/Users/willamhuang/Desktop/1/train"
+saveroot = "/Users/willamhuang/Desktop/train"
 cs_dataset = UCF101(saveroot)
 print(cs_dataset.__len__())
 print(len(cs_dataset.train_dataset[1]))

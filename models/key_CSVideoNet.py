@@ -27,7 +27,8 @@ class Key_CSVideoNet(BasicModule):
         #output size [batch_size,height,width]
         #input_ = input.unsqueeze(1).repeat(1,2,1,1)
         #key_m,_ = self.Measurements(input_)
-        output = self.KeyCNN(input).view(input.size(0),self.Height,self.Widht)
-        return output
+        output = self.KeyCNN(input)
+        output_ = output.view(input.size(0),self.Height,self.Widht)
+        return output_
 
 

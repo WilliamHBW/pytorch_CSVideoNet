@@ -6,6 +6,7 @@ from .measurements import Measurements
 import time
 import torchsnooper
 from config import opt
+import torchsnooper
 
 class KeyCNN(BasicModule):
     def __init__(self,key_CR,Height,Width,numChannels):
@@ -32,7 +33,7 @@ class KeyCNN(BasicModule):
         cnn_layers['relu6'] = nn.ReLU(inplace=True)
         cnn_layers['conv7'] = nn.Conv2d(16,1,3,1,1)
         self.key_cnn = nn.Sequential(cnn_layers)
-    
+    #@torchsnooper.snoop()
     def forward(self,input):
         #input size [batch_size,key_CR*Height*Width]
         #output size [batch_size,height*width]
@@ -92,6 +93,11 @@ class RNN_(BasicModule):
     def forward(self,input):
         #input size [seqLength,batch_size,height*width]
         #output size [batch_size,seqLength,height,width]
+        if not hasattr(self, '_flattened'):
+            self.rnn_1.flatten_parameters()
+            self.rnn_2.flatten_parameters()
+            self.rnn_3.flatten_parameters()
+        setattr(self, '_flattened', True)
         b_s = input.size(1)
         x_1,_ = self.rnn_1(input)
         x_2,_= self.rnn_2(x_1)
@@ -112,18 +118,18 @@ class CSVideoNet(BasicModule):
         self.numChannels = numChannels
         self.p = bernoulli_p
 
-        self.measurement = Measurements(self.key_CR,self.nonkey_CR,self.Height,self.Width,self.seqLength,self.p)
+        #self.measurement = Measurements(self.key_CR,self.nonkey_CR,self.Height,self.Width,self.seqLength,self.p)
         self.rnnmodule = RNN_(self.seqLength,self.Height,self.Width,self.numChannels)
         self.key_cnnmodule = KeyCNN(self.key_CR,self.Height,self.Width,self.numChannels)
         self.nonkey_cnnmodule_1 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_2 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_3 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_4 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_5 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_6 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_7 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_8 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
-        self.nonkey_cnnmodule_9 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_2 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_3 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_4 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_5 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_6 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_7 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_8 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
+        #self.nonkey_cnnmodule_9 = nonKeyCNN(self.nonkey_CR,self.Height,self.Width,self.numChannels)
     #@torchsnooper.snoop()
     def recon_forward(self,x_key,x_nonkey):
         #x_key size is [batch_size,keyCR*Height*Width]
@@ -134,48 +140,55 @@ class CSVideoNet(BasicModule):
     
         x_med[:,0] = self.key_cnnmodule(x_key)
         x_med[:,1] = self.nonkey_cnnmodule_1(x_nonkey[:,0])
-        x_med[:,2] = self.nonkey_cnnmodule_2(x_nonkey[:,1])
-        x_med[:,3] = self.nonkey_cnnmodule_3(x_nonkey[:,2])
-        x_med[:,4] = self.nonkey_cnnmodule_4(x_nonkey[:,3])
-        x_med[:,5] = self.nonkey_cnnmodule_5(x_nonkey[:,4])
-        x_med[:,6] = self.nonkey_cnnmodule_6(x_nonkey[:,5])
-        x_med[:,7] = self.nonkey_cnnmodule_7(x_nonkey[:,6])
-        x_med[:,8] = self.nonkey_cnnmodule_8(x_nonkey[:,7])
-        x_med[:,9] = self.nonkey_cnnmodule_9(x_nonkey[:,8])
+        #x_med[:,2] = self.nonkey_cnnmodule_2(x_nonkey[:,1])
+        #x_med[:,3] = self.nonkey_cnnmodule_3(x_nonkey[:,2])
+        #x_med[:,4] = self.nonkey_cnnmodule_4(x_nonkey[:,3])
+        #x_med[:,5] = self.nonkey_cnnmodule_5(x_nonkey[:,4])
+        #x_med[:,6] = self.nonkey_cnnmodule_6(x_nonkey[:,5])
+        #x_med[:,7] = self.nonkey_cnnmodule_7(x_nonkey[:,6])
+        #x_med[:,8] = self.nonkey_cnnmodule_8(x_nonkey[:,7])
+        #x_med[:,9] = self.nonkey_cnnmodule_9(x_nonkey[:,8])
 
         x_med_ = x_med.permute(1,0,2)
         output = self.rnnmodule(x_med_)
 
         return output
     
-    def load(self,key_cnn_path,nonkey_cnn_path,rnn_path,measurements_path):
-        self.rnnmodule.load(rnn_path)
-        self.key_cnnmodule.load(key_cnn_path)
-        self.nonkey_cnnmodule_1.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_2.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_3.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_4.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_5.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_6.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_7.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_8.load(nonkey_cnn_path)
-        self.nonkey_cnnmodule_9.load(nonkey_cnn_path)
-        self.measurement.load(measurements_path)
-        print("the whole net has been loaded successfully!")
-    
+    def load(self,load_path,train=True):
+        if train:
+            dic_pre_trained = t.load(load_path)
+            trained_list = list(dic_pre_trained.keys())
+            dic_key_cnn = self.key_cnnmodule.state_dict().copy()
+            key_cnn_list = list(dic_key_cnn.keys())
+            for i in range(len(trained_list)):
+                dic_key_cnn[key_cnn_list[i]] = dic_pre_trained[trained_list[i]]
+            self.key_cnnmodule.load_state_dict(dic_key_cnn)
+            print("the key cnn net has been loaded successfully!")
+        else:
+            dic_pre_trained = t.load(load_path)
+            trained_list = list(dic_pre_trained.keys())
+            dic_csvideonet = self.state_dict().copy()
+            csvideonet_list = list(dic_csvideonet.keys())
+            for i in range(len(trained_list)):
+                dic_csvideonet[csvideonet_list[i]] = dic_pre_trained[trained_list[i]]
+            self.load_state_dict(dic_csvideonet)
+            print("the whole net has been loaded successfully!")
+            
+    '''
     def save(self):
-        self.key_cnnmodule.save('key_cnnmodule')
-        self.nonkey_cnnmodule_1.save('nonkey_cnnmodule')
+        #self.key_cnnmodule.save('key_cnnmodule')
+        #self.nonkey_cnnmodule_1.save('nonkey_cnnmodule')
         self.rnnmodule.save('rnnmodule')
-        self.measurement.save('measurements')
+        #self.measurement.save('measurements')
         print("the whole net has been saved successfully!")
-    
-    def forward(self,input):
+    '''
+    #@torchsnooper.snoop()
+    def forward(self,key_m,non_key_m):
         #input type torch tensor
         #input size [batch_size,seqLength,height,width]
         #output type torch tensor
         #output size [batch_size,seqLength,height,width]
-        key_m,non_key_m = self.measurement(input)
+        #key_m,non_key_m = self.measurement(input)
         output = self.recon_forward(key_m,non_key_m)
         return output
 '''

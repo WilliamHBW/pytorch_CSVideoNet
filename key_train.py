@@ -8,14 +8,14 @@ from torch.utils .data import DataLoader
 from torchnet import meter 
 from tqdm import tqdm 
 import math
+import numpy as np
 
 def train(**kwargs):
-    #os.environ['CUDA_VISIBLE_DEVICES'] = 
     opt._parse(kwargs)
 
     model = models.Key_CSVideoNet(opt.CR[0],opt.Height,opt.Width,1)
-    if t.cuda.device_count() > 1:
-        model = t.nn.DataParallel(model,device_ids = [0,1,2,3])
+    #if t.cuda.device_count() > 1:
+    #    model = t.nn.DataParallel(model,device_ids = [0,1,2,3])
     model.to(opt.device)
 
     train_data = UCF101(opt.train_data_root,train=True)
@@ -43,7 +43,7 @@ def train(**kwargs):
             target = input
             input_ = input.view(input.size(0),input.size(1)*input.size(2),1)
             weight = key_bernoulli_weights.repeat(input.size(0),1,1).to(opt.device)
-            data_i = t.bmm(weight,input_).view(input.size(0),1024)
+            data_i = t.bmm(weight,input_).view(input.size(0),int(opt.CR[0]*1024))
 
             optimizer.zero_grad()
             score = model(data_i)
@@ -76,7 +76,7 @@ def val(model,dataloader):
         val_input = data[0].float().to(opt.device).squeeze(1)
         val_input_ = val_input.view(val_input.size(0),val_input.size(1)*val_input.size(2),1)
         weight = key_bernoulli_weights.repeat(val_input.size(0),1,1).to(opt.device)
-        data_i = t.bmm(weight,val_input_).view(val_input.size(0),1024)
+        data_i = t.bmm(weight,val_input_).view(val_input.size(0),int(opt.CR[0]*1024))
         score = model(data_i).unsqueeze(1)
         utils_eval.add(score,val_input.unsqueeze(1).float())
     model.train()
@@ -85,8 +85,9 @@ def val(model,dataloader):
 
 if __name__=='__main__':
     import fire
-    os.environ['CUDA_VISIBLE_DEVICES'] = '2,3,4,5'
-    key_bernoulli_weights = t.FloatTensor(1024,1024).bernoulli_(50/100)
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    '''
+    key_bernoulli_weights = t.FloatTensor(int(opt.CR[0]*1024),1024).bernoulli_(50/100)
     n = 10
     stdv = 1./math.sqrt(n)
     weights_zero = key_bernoulli_weights[key_bernoulli_weights==0].uniform_(-stdv,0)
@@ -96,4 +97,8 @@ if __name__=='__main__':
     key_bernoulli_weights.clamp(-1.0,1.0)
     key_bernoulli_weights = 0.5*(key_bernoulli_weights.sign()+1)
     key_bernoulli_weights[key_bernoulli_weights==0.5]==1
+    np.savetxt('key_weight.txt',key_bernoulli_weights)
+    '''
+    key_bernoulli_weights = np.loadtxt('key_weight.txt')
+    key_bernoulli_weights = t.from_numpy(key_bernoulli_weights).float()
     fire.Fire()
